@@ -188,22 +188,58 @@ export function matchLocally(text) {
     return { action: 'find_incident', args: { query: said }, reply: 'Finding it.' };
   }
 
-  // "turn on/off <layer>" is the single most common thing anyone says to this
-  // map, and it does not need a language model.
-  const toggle = /\b(turn|switch)\s+(on|off)\s+(?:the\s+)?(.+)$/.exec(said)
-    || /\b(show|hide)\s+(?:me\s+)?(?:the\s+)?(.+)$/.exec(said);
-  if (toggle) {
-    const wantOn = /on|show/.test(toggle[1] === 'show' || toggle[1] === 'hide' ? toggle[1] : toggle[2]);
-    const phrase = toggle[3] || toggle[2] || '';
-    for (const [layerId, words] of Object.entries(LAYER_WORDS)) {
-      if (words.split(',').some((w) => phrase.includes(w.trim()))) {
-        return {
-          action: 'set_layer_visibility',
-          // `enabled`, not `visible` — checked against the handler in
-          // gevActions.js. The wrong name fails silently.
-          args: { layerId, enabled: wantOn },
-          reply: `${wantOn ? 'Showing' : 'Hiding'} ${layerId.replace(/-/g, ' ')}.`,
-        };
+  // Common natural phrasing: "turn on the cameras" and "turn the cameras on"
+  // are both normal speech and both need to be treated the same. The local
+  // matcher must understand both without falling through to geocoding.
+  const turnToggleAfter = /\b(?:turn|switch)\s+(?:the\s+)?(.+?)\s+(on|off)\b/i.exec(said);
+  if (turnToggleAfter) {
+    const wantOn = /on/i.test(turnToggleAfter[2] || 'off');
+    const phrase = turnToggleAfter[1].replace(/[.?!,]+$/, '').trim();
+    if (phrase) {
+      for (const [layerId, words] of Object.entries(LAYER_WORDS)) {
+        if (words.split(',').some((w) => phrase.includes(w.trim()))) {
+          return {
+            action: 'set_layer_visibility',
+            // `enabled`, not `visible` — checked against the handler in
+            // gevActions.js. The wrong name fails silently.
+            args: { layerId, enabled: wantOn },
+            reply: `${wantOn ? 'Showing' : 'Hiding'} ${layerId.replace(/-/g, ' ')}.`,
+          };
+        }
+      }
+    }
+  } else {
+    const turnToggleBefore = /\b(?:turn|switch)\s+(on|off)\s+(?:the\s+)?(.+)$/i.exec(said);
+    if (turnToggleBefore) {
+      const wantOn = /on/i.test(turnToggleBefore[1] || 'off');
+      const phrase = (turnToggleBefore[2] || '').replace(/[.?!,]+$/, '').trim();
+      if (phrase) {
+        for (const [layerId, words] of Object.entries(LAYER_WORDS)) {
+          if (words.split(',').some((w) => phrase.includes(w.trim()))) {
+            return {
+              action: 'set_layer_visibility',
+              args: { layerId, enabled: wantOn },
+              reply: `${wantOn ? 'Showing' : 'Hiding'} ${layerId.replace(/-/g, ' ')}.`,
+            };
+          }
+        }
+      }
+    }
+  }
+
+  const showToggle = /\b(show|hide)\s+(?:me\s+)?(?:the\s+)?(.+)$/i.exec(said);
+  if (showToggle) {
+    const wantOn = /show/i.test(showToggle[1] || 'hide');
+    const phrase = (showToggle[2] || '').replace(/[.?!,]+$/, '').trim();
+    if (phrase) {
+      for (const [layerId, words] of Object.entries(LAYER_WORDS)) {
+        if (words.split(',').some((w) => phrase.includes(w.trim()))) {
+          return {
+            action: 'set_layer_visibility',
+            args: { layerId, enabled: wantOn },
+            reply: `${wantOn ? 'Showing' : 'Hiding'} ${layerId.replace(/-/g, ' ')}.`,
+          };
+        }
       }
     }
   }

@@ -98,6 +98,8 @@ test('layer toggles still win over navigation', () => {
   assert.equal(matchLocally('show shootings')?.action, 'set_layer_visibility');
   assert.equal(matchLocally('hide temperature')?.action, 'set_layer_visibility');
   assert.equal(matchLocally('turn on cameras')?.args.layerId, 'cctv');
+  assert.equal(matchLocally('turn the cameras on')?.args.layerId, 'cctv');
+  assert.equal(matchLocally('switch the radio off')?.args.layerId, 'radio');
 });
 
 test('layer visibility uses `enabled`, the name the handler checks', () => {
@@ -105,6 +107,7 @@ test('layer visibility uses `enabled`, the name the handler checks', () => {
   const m = matchLocally('show shootings');
   assert.equal(m.args.enabled, true);
   assert.equal(matchLocally('hide shootings').args.enabled, false);
+  assert.equal(matchLocally('switch the radio off').args.enabled, false);
 });
 
 test('view commands resolve locally', () => {
